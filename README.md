@@ -26,6 +26,7 @@ put xt3d_MeshFromText(tMesh["vertices"], "", "") into tMeshHandle
 | `Map.Pieces(world)` | `col,row,floor/roof/north/south/east/west` per open cell |
 | `Map.IsOpen(world, col, row)` | true for open cells inside the world |
 | `Map.Blocks(grid)` | the other way round: raised blocks for filled cells, `col,row,top/north/south/east/west` (sprites made solid, relief pictures) |
+| `Map.BlockEdges(grid, cell, height [, panel])` | the blocks' outline as line segments `x1,y1,z1,x2,y2,z2`, each edge once (vector displays); picture layout centred on 0,0, z toward the viewer |
 | `Map.IsFilled(grid, col, row)` | true for filled cells inside the grid |
 | `Map.FindPath(world, from, to [, diagonal])` | A* path, one `col,row` per line; empty if none. Diagonals never cut wall corners. |
 | `Map.Regions(world)` | open space as rectangles `id,left,top,right,bottom` |

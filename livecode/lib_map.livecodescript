@@ -9,7 +9,7 @@ script "LIB_MAP"
 -- (A sprite drawn the other way round: Bit.Invert.) Cells are "col,row", 1-based,
 -- rows grow southward, columns eastward.
 --
--- Handlers: Map.Stitch, Map.Seams, Map.Pieces, Map.IsOpen, Map.Blocks, Map.IsFilled,
+-- Handlers: Map.Stitch, Map.Seams, Map.Pieces, Map.IsOpen, Map.Blocks, Map.BlockEdges, Map.IsFilled,
 -- Map.FindPath, Map.Regions, Map.RegionLinks, Map.MeshText
 
 -------------------------------------------------------------------- sections and world
@@ -169,6 +169,74 @@ function Map.Blocks pGrid
    if tOut is not empty then delete the last char of tOut
    return tOut
 end Map.Blocks
+
+-- The outline of Map.Blocks as line segments, for vector displays: every block edge once
+-- (edges shared by neighbouring faces are not repeated). Picture layout, centred on 0,0:
+-- x right, y up (rows go down the picture), z out of the picture toward the viewer;
+-- a cell is pCell wide, blocks stand pHeight out. pPanel true adds the grid lines of
+-- the whole picture at z = 0. One segment per line:  x1,y1,z1,x2,y2,z2
+function Map.BlockEdges pGrid, pCell, pHeight, pPanel
+   local tCols, tRows, tFace, tC, tR, tX0, tX1, tY0, tY1, tH, tSeen, tOut, tI, tLeft, tTop
+   if pCell is empty then put 1 into pCell
+   if pHeight is empty then put pCell into pHeight
+   put pHeight into tH
+   put the number of chars of line 1 of pGrid into tCols
+   put the number of lines of pGrid into tRows
+   put -tCols * pCell / 2 into tLeft
+   put tRows * pCell / 2 into tTop
+   repeat for each line tFace in Map.Blocks(pGrid)
+      put item 1 of tFace into tC
+      put item 2 of tFace into tR
+      put tLeft + (tC - 1) * pCell into tX0
+      put tX0 + pCell into tX1
+      put tTop - tR * pCell into tY0
+      put tY0 + pCell into tY1
+      switch item 3 of tFace
+         case "top"
+            Map.AddQuad tSeen, tX0,tY0,tH, tX1,tY0,tH, tX1,tY1,tH, tX0,tY1,tH
+            break
+         case "north"
+            Map.AddQuad tSeen, tX0,tY1,0, tX1,tY1,0, tX1,tY1,tH, tX0,tY1,tH
+            break
+         case "south"
+            Map.AddQuad tSeen, tX0,tY0,0, tX1,tY0,0, tX1,tY0,tH, tX0,tY0,tH
+            break
+         case "west"
+            Map.AddQuad tSeen, tX0,tY0,0, tX0,tY1,0, tX0,tY1,tH, tX0,tY0,tH
+            break
+         case "east"
+            Map.AddQuad tSeen, tX1,tY0,0, tX1,tY1,0, tX1,tY1,tH, tX1,tY0,tH
+            break
+      end switch
+   end repeat
+   if pPanel is true then
+      repeat with tI = 0 to tCols
+         Map.AddEdge tSeen, (tLeft + tI * pCell) & "," & tTop & ",0", (tLeft + tI * pCell) & "," & -tTop & ",0"
+      end repeat
+      repeat with tI = 0 to tRows
+         Map.AddEdge tSeen, tLeft & "," & (tTop - tI * pCell) & ",0", -tLeft & "," & (tTop - tI * pCell) & ",0"
+      end repeat
+   end if
+   put the keys of tSeen into tOut
+   sort lines of tOut
+   return tOut
+end Map.BlockEdges
+
+private command Map.AddQuad @pSeen, pAX,pAY,pAZ, pBX,pBY,pBZ, pCX,pCY,pCZ, pDX,pDY,pDZ
+   Map.AddEdge pSeen, pAX & "," & pAY & "," & pAZ, pBX & "," & pBY & "," & pBZ
+   Map.AddEdge pSeen, pBX & "," & pBY & "," & pBZ, pCX & "," & pCY & "," & pCZ
+   Map.AddEdge pSeen, pCX & "," & pCY & "," & pCZ, pDX & "," & pDY & "," & pDZ
+   Map.AddEdge pSeen, pDX & "," & pDY & "," & pDZ, pAX & "," & pAY & "," & pAZ
+end Map.AddQuad
+
+-- one segment, stored once whichever way round it comes
+private command Map.AddEdge @pSeen, pA, pB
+   if pA < pB then
+      put true into pSeen[pA & "," & pB]
+   else
+      put true into pSeen[pB & "," & pA]
+   end if
+end Map.AddEdge
 
 function Map.IsFilled pGrid, pCol, pRow
    local tC
