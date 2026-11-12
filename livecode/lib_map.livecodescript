@@ -9,8 +9,8 @@ script "LIB_MAP"
 -- (A sprite drawn the other way round: Bit.Invert.) Cells are "col,row", 1-based,
 -- rows grow southward, columns eastward.
 --
--- Handlers: Map.Stitch, Map.Seams, Map.Pieces, Map.IsOpen, Map.FindPath, Map.Regions,
--- Map.RegionLinks, Map.MeshText
+-- Handlers: Map.Stitch, Map.Seams, Map.Pieces, Map.IsOpen, Map.Blocks, Map.IsFilled,
+-- Map.FindPath, Map.Regions, Map.RegionLinks, Map.MeshText
 
 -------------------------------------------------------------------- sections and world
 
@@ -147,6 +147,35 @@ function Map.Pieces pWorld
    delete the last char of tOut
    return tOut
 end Map.Pieces
+
+-- Raised blocks from the filled ("1") cells: the other way round from Map.Pieces, for
+-- relief pictures, sprites made solid, and bit faces. One line per face:
+--   col,row,top  for every filled cell, and  col,row,north/south/east/west  for every
+--   side of a filled cell next to an empty cell or the edge (facing outward).
+function Map.Blocks pGrid
+   local tH, tRowNo, tCol, tOut, tRow
+   put the number of lines of pGrid into tH
+   repeat with tRowNo = 1 to tH
+      put line tRowNo of pGrid into tRow
+      repeat with tCol = 1 to the number of chars of tRow
+         if char tCol of tRow is "0" then next repeat
+         put tCol & "," & tRowNo & ",top" & return after tOut
+         if not Map.IsFilled(pGrid, tCol, tRowNo - 1) then put tCol & "," & tRowNo & ",north" & return after tOut
+         if not Map.IsFilled(pGrid, tCol, tRowNo + 1) then put tCol & "," & tRowNo & ",south" & return after tOut
+         if not Map.IsFilled(pGrid, tCol + 1, tRowNo) then put tCol & "," & tRowNo & ",east" & return after tOut
+         if not Map.IsFilled(pGrid, tCol - 1, tRowNo) then put tCol & "," & tRowNo & ",west" & return after tOut
+      end repeat
+   end repeat
+   if tOut is not empty then delete the last char of tOut
+   return tOut
+end Map.Blocks
+
+function Map.IsFilled pGrid, pCol, pRow
+   local tC
+   if pCol < 1 or pRow < 1 or pRow > the number of lines of pGrid then return false
+   put char pCol of line pRow of pGrid into tC
+   return tC is not empty and tC is not "0"
+end Map.IsFilled
 
 -------------------------------------------------------------------- pathfinding
 
